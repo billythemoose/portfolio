@@ -2,7 +2,7 @@
 title: Portfolio Site
 description: this site, built with astro and served from s3 and cloudfront
 category: technical
-importance: 1
+date: 2026-11-04
 repo: https://github.com/billythemoose/portfolio
 ---
 

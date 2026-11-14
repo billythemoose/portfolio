@@ -32,8 +32,8 @@ const projects = defineCollection({
     title: z.string(),
     description: z.string().optional(),
     category: z.string().optional(),
-    // Lower numbers sort first.
-    importance: z.number().default(100),
+    // Newest first on the projects page.
+    date: z.coerce.date(),
     repo: z.url().optional(),
     demo: z.url().optional(),
     draft: z.boolean().default(false),

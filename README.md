@@ -49,7 +49,7 @@ A project:
 title: My Project
 description: short summary for the project card
 category: technical
-importance: 2 # lower sorts first
+date: 2026-11-10 # newest sorts first
 repo: https://github.com/billythemoose/my-project
 demo: https://demo.example.com
 ---

@@ -2,7 +2,7 @@
 title: Wedding Website
 description: a password-protected wedding site built with angular, lambda@edge and aws cdk
 category: technical
-importance: 2
+date: 2026-11-10
 ---
 
 This is a password-protected wedding website made of three prerendered [Angular](https://angular.dev/) apps served from one private S3 bucket through CloudFront. A Lambda@Edge function checks every request for a valid guest token before anything is served. A small API on API Gateway and Lambda handles login, after-party access and RSVPs, and AWS CDK defines all of it. [This blog post](/blog/2026/cs-wedding-site/) covers how it was built.
