@@ -8,13 +8,15 @@ categories: project
 
 ## One-Line Summary
 
-What started as "how do I get everyone's photos from the wedding without making them install an app" turned into shotparty: a QR-code photo drop that anyone can deploy into their own AWS account with one command.
+What started as "a website to upload party photos and videos so people don't have to install an app can't be that complicated or expensive, right?" turned into shotparty: a QR-code photo drop that anyone can deploy into their own AWS account with one command.
+
 
 ## Why Build It
 
 1. **Get the photos.** Every guest leaves an event with a phone full of photos, and almost none of them get sent to the people who hosted it. A QR code on a card is about as low-effort as it gets: scan, pick photos, done.
-2. **Own the photos.** The hosted products for this cost $30–$100 and keep the files in *their* cloud for anywhere from one month to two years. A Google Photos shared album needs every guest to have a Google account. I wanted the original files, at full quality, in a bucket I control.
-3. **It's fun.** Same reason as [the wedding website](/blog/2026/cs-wedding-site/). It's a fun problem with real constraints, and a real deadline.
+2. **An app is overkill.** There's no reason someone attending a party should have to install an app they're going to use one time then forget about. 
+3. **Own the photos.** The hosted products for this cost $30–$100 and keep the files in *their* cloud for anywhere from one month to two years. A Google Photos shared album needs every guest to have a Google account. I wanted the original files, at full quality, in a bucket I control.
+4. **It's fun.** Same reason as [the wedding website](/blog/2026/cs-wedding-site/). There aren't that many moving pieces so let's see what we can throw together.
 
 Check it out yourself. Deploy your own and test it out!
 - GitHub: [billythemoose/shotparty](https://github.com/billythemoose/shotparty)
@@ -29,11 +31,11 @@ Check it out yourself. Deploy your own and test it out!
 
 ## How It Was Built
 
-This one was built differently from the wedding site. Before writing any code, I wrote an architecture baseline and a staged development plan, then worked through it stage by stage with [Claude Code](https://claude.com/claude-code). The rules were short:
+This one was built differently from the wedding site. Before writing any code, I wrote an architecture baseline and a staged development plan, then worked through it stage by stage. The rules were short:
 
 - Every stage is small, ends in a working, deployable state and is one commit.
-- Claude implements the stage and runs the automated checks (lint, typecheck, tests, `cfn-lint`), then **stops**.
-- I validate it with the stage's *Verify* steps, on a real phone, with `curl` or in the AWS console, and only then does it get committed.
+- Each stage has to pass the automated checks (lint, typecheck, tests, `cfn-lint`) first.
+- Then it has to pass the stage's *Verify* steps, on a real phone, with `curl` or in the AWS console, and only then does it get committed.
 - The plan is a living document. Every deviation, bug and verification result is written down under its stage.
 
 That last rule is why this post can quote exact numbers. It ended up as 35 stages over about five weeks. Two of them were skipped and one was descoped.
