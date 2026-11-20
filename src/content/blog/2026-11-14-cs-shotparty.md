@@ -36,9 +36,8 @@ This one was built differently from the wedding site. Before writing any code, I
 - Every stage is small, ends in a working, deployable state and is one commit.
 - Each stage has to pass the automated checks (lint, typecheck, tests, `cfn-lint`) first.
 - Then it has to pass the stage's *Verify* steps, on a real phone, with `curl` or in the AWS console, and only then does it get committed.
-- The plan is a living document. Every deviation, bug and verification result is written down under its stage.
+- The plan is a living document. Every deviation, bug, and verification result is written down under its stage.
 
-That last rule is why this post can quote exact numbers. It ended up as 35 stages over about five weeks. Two of them were skipped and one was descoped.
 
 <figure>
 <svg viewBox="0 0 760 210" role="img" aria-labelledby="sp-tl-title sp-tl-desc" class="dg-sptl" style="width:100%;height:auto">
@@ -80,7 +79,7 @@ That last rule is why this post can quote exact numbers. It ended up as 35 stage
 
 ## Process
 
-The project went through four phases. The first three took three days and got it ready for the event. The fourth took most of October and turned it into something other people could run.
+The project went through four phases. The first three took three days and got it ready for the event. The fourth was slowly worked on after the original event was complete and turned it into something other people could run.
 
 | Phase | When | What it added |
 |---|---|---|
@@ -91,13 +90,13 @@ The project went through four phases. The first three took three days and got it
 
 ### 1. Upload something
 
-The first day was mostly writing the plan. A quick look at the competition set the feature list: QR code, no login, original quality, video, bulk download, an upload window and moderation.
+The first day was mostly writing the plan. A quick look at the feature list: QR code, no login, original quality, video, bulk download, an upload window and moderation.
 
-The AWS side started with a fresh member account under my existing AWS Organization. It has no root credentials, and a service control policy denies every region except `us-east-1`. The new account sat in "activation pending" for most of a day, so the first few stacks were committed unverified and deployed the next morning.
+The AWS side started with a fresh member account under my existing AWS Organization. It has no root credentials, and a service control policy denies every region except `us-east-1`.
 
-The core idea: **photo bytes never pass through Lambda.** The browser asks a `presign` Lambda for permission to upload one file, and gets back an S3 presigned POST locked to an exact key, content type and byte size, valid for 10 minutes. The browser then posts the file straight to S3. When it lands, EventBridge triggers a `validate` Lambda. It reads the first 64 bytes, checks they're really a photo or video, then copies the file to `accepted/` or deletes it. A zip renamed to `.jpg` is gone within a second.
+The core idea: use S3 features for core requirements and Lambda to facilitate those capabilities. The browser asks a `presign` Lambda for permission to upload one file, and gets back an S3 presigned POST locked to an exact key, content type and byte size, valid for 10 minutes. The browser then posts the file straight to S3. When it lands, EventBridge triggers a `validate` Lambda. It reads the first 64 bytes, checks they're really a photo or video, then copies the file to `accepted/` or deletes it.
 
-The other early decision was **two stacks per stage**. The *data* stack holds the media bucket and the DynamoDB table, with termination protection, a stack policy that refuses to replace or delete either one, retain policies, versioning and point-in-time recovery. The *app* stack holds everything else and can be deleted and recreated at will. Ten app deploys later, every test photo was still there.
+The other early decision was **two stacks per stage**. The *data* stack holds the media bucket and the DynamoDB table, with termination protection, a stack policy that refuses to replace or delete either one, retain policies, versioning and point-in-time recovery. The *app* stack holds everything else and can be deleted and recreated at will.
 
 A couple of bugs showed up as soon as things were deployed:
 
@@ -108,15 +107,15 @@ The guest page uploads three files at a time, with per-file progress and automat
 
 ### 2. Make it hard to abuse
 
-A public page that writes to my bucket is a free file host for anyone who finds it. Nothing public can be made fully bot-proof, so the goal was to make scripted abuse impractical and **put a hard ceiling on the worst case**. Every request has to get through a stack of layers:
+A public page that writes to my bucket is a free file host for anyone who finds it. Nothing public can be made fully bot-proof, so the goal was to make scripted abuse impractical and put a hard ceiling on the worst case. Every request has to get through a stack of layers:
 
-- **An unguessable event token** in the QR URL (128-bit random), and optionally a PIN printed on the card but not in the QR code.
+- **Complex event token** in the QR URL (128-bit random), and optionally a PIN printed on the card but not in the QR code.
 - **Cloudflare Turnstile**, verified server-side before a session is issued. Every PIN guess costs a human check.
 - **A signed 12-hour session**, required for every presign.
 - **Quotas** per session, per IP per hour and per event, kept as DynamoDB counters.
-- **Throttles** at every level: the WAF, API Gateway and reserved Lambda concurrency.
+- **Multiple Throttles** the WAF, API Gateway, and reserved Lambda concurrency.
 - **An upload window and a kill switch**, checked on every request.
-- **CloudWatch alarms and a budget** that email me when anything looks off.
+- **CloudWatch alarms and a budget** that send emails when anything looks off.
 
 A few things in this phase weren't in the plan:
 
@@ -128,37 +127,32 @@ A few things in this phase weren't in the plan:
 
 ### 3. Event day
 
-Prod went up on the morning of September 26. The plan called for a rehearsal with 3–5 friends on different phones. That wasn't happening on short notice, so it became a load-test script that simulates guests, plus a solo run on my own phone.
+Prod went up on the morning of September 26. A small load-test script that simulates guest uploads was run as a rehearsal.
 
-**Load test #1** sent 20 simulated guests uploading 10 photos each, all at once. **158 of 200 succeeded.** Two real bugs that no unit test would have found:
+**Load test #1** sent 20 simulated guests uploading 10 photos each, all at once. **158 of 200 succeeded.** Two real bugs showed up:
 
 - **32 × `TransactionConflict`.** Each presign reserved its quota in one DynamoDB transaction across three counters. When many guests at the same venue upload at once, they all hit the same event counter and the same IP counter, and DynamoDB cancels transactions that collide. The fix was three single-item conditional updates, rolling back the earlier ones when a later counter is full. It has no conflicts and costs half as much.
 - **10 × throttled.** 60 presigns arrived at the same moment, each with a ~2-second cold start, against a reserved concurrency of 25. Raising it to 100 fixed it.
 
-The alarms caught both while it happened. Three of them emailed me within minutes, which turned out to be a good real-world test of the alerting. **Load test #2**, after the fixes, sent 30 guests and 300 files: 300 of 300 succeeded, with no errors and no throttles.
+The alarms caught both while it happened. Three of them emailed me within minutes, which turned out to be a good real-world test of the alerting. 
+
+**Load test #2**, after the fixes, sent 30 guests and 300 files: 300 of 300 succeeded, with no errors and no throttles.
 
 The solo rehearsal found one more bug: the PIN field showed up on an event with no PIN. `.field { display: grid }` overrode the `hidden` attribute, and every dev event had a PIN, so nobody had seen it. One global CSS rule and a regression test later, it was gone.
 
 The real event and its QR code were created that same morning. Month-to-date AWS spend at that point: **$0.002**. Afterwards, `npm run download` pulled every file and checked each one's MD5 against S3. The upload window closed itself 30 days later.
 
-### 4. Make it anyone's
+### 4. Wrap it up and share
 
-After the event, the question was whether to leave it as a one-off. I decided to make it a public project that anyone can self-host from **one config file**, with as few manual steps as possible. The private repo stayed as the archive, and the public one started from a fresh, clean history.
+After the event, the question was whether to leave it as a one-off. I decided to make it a public project that anyone can self-host from **one config file**, with as few manual steps as possible. The private repo stayed as the archive, and the public one started with a clean history.
 
 - **One config file.** Every account-specific value (account ID, domains, ARNs, keys) came out of the code and into `shotparty.config.json`, with a JSON schema that reports every error at once.
 - **Generic events.** Every guest-facing word now comes from the event: its headline, welcome line, thank-you message and accent color. The page nudges the color just far enough to stay readable in light and dark mode. The wedding copy and the cream-and-serif look went away.
-- **A name.** It became *shutterslot*, a mail-slot pun, and later *shotparty*.
 - **`npm run setup`** checks the tools, creates the secrets, deploys both stacks, creates the Turnstile widget through Cloudflare's API, makes the first event and its QR code, and runs a health check. It's safe to re-run. Before running a deploy, it checks the change set and refuses anything that would replace the data stack or the CloudFront distribution the QR codes point at.
 - **RAW photos.** Some guests shoot RAW, and every layer refused it. Now DNG, CR2, CR3, NEF, ARW, RAF, ORF and RW2 get through. It was tested with ProRAW from an iPhone 13 Pro, a DNG from a Pixel 9 Pro and a NEF from a Nikon D7100, and all of them arrived byte-for-byte.
 - **Duplicate uploads.** The same photo could be uploaded again and again. The page now fingerprints each file and skips repeats, and the validator drops a second copy with the same MD5 in the same guest's folder.
 - **CI, CodeQL and Dependabot**, plus documentation explaining how each part works.
 
-Running setup for real turned up a new crop of bugs, mostly in bash:
-
-- macOS still ships bash 3.2, which treats an empty array as an unbound variable under `set -u`.
-- bash ignores `set -e` inside a function on the left of `&&`, so a failed deploy reported success.
-- A deploy step printed a secret's value to the terminal.
-- `npm run setup` printed nothing for 15½ minutes while CloudFormation created a CloudFront distribution. It now shows progress.
 
 Two things were cut. An automated AWS Organizations setup script was built and tested, then deleted before it was committed. Few people would use it, and it would have been the riskiest code in the repo. Continuous deployment through GitHub OIDC was skipped too. The deploy script's change-set guard already covers the dangerous part, so it wasn't worth adding a deploy role that a public repo's workflows could assume.
 
@@ -177,14 +171,12 @@ Two things were cut. An automated AWS Organizations setup script was built and t
 
 ## What I'd Change
 
-- **Get a domain before printing anything.** Tying the printed cards to one CloudFront distribution froze the prod app stack for a month.
-- **Ask for the Lambda concurrency increase on day one.** A new account's limit of 10 is a surprise you don't want during an event.
-- **Do a real rehearsal with people.** The load test found the bugs, but it can't tell you whether someone's aunt can work the file picker.
 - **Resumable uploads.** A single presigned POST is simple and lets S3 enforce the size, but a large video that drops halfway has to start over.
 - **A live slideshow.** It's the obvious next feature, and it's been on the "later" list since day one.
+- **Architecture for SaaS.** Core functionality is there but would require changes to make this a scalable and publicly hosted service. 
 
 ## Was it worth it?
 
-Yes. The photos ended up in a bucket I own, at full quality, for about the cost of a coffee. Making it public turned out to be the bigger project, and most of the interesting problems came from the second part. Building something for one event and then for everyone else are pretty different problems.
+Oh yeah. It was a fairly straight forward implementation that worked perfectly at the event, it's lightweight, and it's reusable. An all around success.
 
 The architecture, abuse layers, deployment and costs are on the [project page](/projects/shotparty/).
