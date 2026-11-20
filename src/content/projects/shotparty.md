@@ -4,12 +4,14 @@ description: a self-hosted qr-code photo and video drop for events, serverless o
 category: technical
 date: 2026-11-14
 repo: https://github.com/billythemoose/shotparty
+demo: https://shotparty.ineedmoreinformation.com/
 ---
 
 shotparty is a self-hosted photo and video drop for events. Guests scan a QR code, pick photos and videos on their phone, and the files land at full quality in an S3 bucket in **your own AWS account**. There's no app, no guest account and no subscription. It's serverless: CloudFront in front of a static page and a small API on API Gateway and Lambda, with a DynamoDB table, all defined in AWS SAM and deployed with one command. [This blog post](/blog/2026/cs-shotparty/) covers how it was built.
 
-The GitHub repo has the quick start, the operations guide and a detailed "how it works" walkthrough of every subsystem.
+The project site gives the short tour. The GitHub repo has the quick start, the operations guide and a detailed "how it works" walkthrough of every subsystem.
 
+- Site: [https://shotparty.ineedmoreinformation.com/](https://shotparty.ineedmoreinformation.com/)
 - GitHub: [billythemoose/shotparty](https://github.com/billythemoose/shotparty)
 
 ## Tech Stack

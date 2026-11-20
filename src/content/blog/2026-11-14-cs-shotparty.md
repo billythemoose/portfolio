@@ -19,6 +19,7 @@ What started as "a website to upload party photos and videos so people don't hav
 4. **It's fun.** Same reason as [the wedding website](/blog/2026/cs-wedding-site/). There aren't that many moving pieces so let's see what we can throw together.
 
 Check it out yourself. Deploy your own and test it out!
+- Site: [https://shotparty.ineedmoreinformation.com/](https://shotparty.ineedmoreinformation.com/)
 - GitHub: [billythemoose/shotparty](https://github.com/billythemoose/shotparty)
 
 ## Constraints
