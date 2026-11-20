@@ -86,11 +86,11 @@ The project went through four phases. The first three took three days and got it
 | 1. Upload something | Sep 24–25 | AWS account, two stacks, presigned uploads, the guest page, file validation |
 | 2. Make it hard to abuse | Sep 25–26 | event tokens, Turnstile, signed sessions, quotas, throttles, alarms, the CloudFront Free plan |
 | 3. Event day | Sep 26 | prod deploy, load tests, a solo rehearsal, the real event, download tools |
-| 4. Make it anyone's | Oct 12–29 | one config file, generic events, `npm run setup`, RAW photos, duplicate detection, CI, docs, a public repo |
+| 4. Wrap it up and share | Oct 12–29 | one config file, generic events, `npm run setup`, RAW photos, duplicate detection, CI, docs, a public repo |
 
 ### 1. Upload something
 
-The first day was mostly writing the plan. A quick look at the feature list: QR code, no login, original quality, video, bulk download, an upload window and moderation.
+The first day was mostly writing the plan. The feature list was short: QR code, no login, original quality, video, bulk download, an upload window and moderation.
 
 The AWS side started with a fresh member account under my existing AWS Organization. It has no root credentials, and a service control policy denies every region except `us-east-1`.
 
@@ -113,7 +113,7 @@ A public page that writes to my bucket is a free file host for anyone who finds 
 - **Cloudflare Turnstile**, verified server-side before a session is issued. Every PIN guess costs a human check.
 - **A signed 12-hour session**, required for every presign.
 - **Quotas** per session, per IP per hour and per event, kept as DynamoDB counters.
-- **Multiple Throttles** the WAF, API Gateway, and reserved Lambda concurrency.
+- **Multiple Throttles:** the WAF, API Gateway, and reserved Lambda concurrency.
 - **An upload window and a kill switch**, checked on every request.
 - **CloudWatch alarms and a budget** that send emails when anything looks off.
 
@@ -138,7 +138,7 @@ The alarms caught both while it happened. Three of them emailed me within minute
 
 **Load test #2**, after the fixes, sent 30 guests and 300 files: 300 of 300 succeeded, with no errors and no throttles.
 
-The solo rehearsal found one more bug: the PIN field showed up on an event with no PIN. `.field { display: grid }` overrode the `hidden` attribute, and every dev event had a PIN, so nobody had seen it. One global CSS rule and a regression test later, it was gone.
+The rehearsal found one more bug: the PIN field showed up on an event with no PIN. `.field { display: grid }` overrode the `hidden` attribute, and every dev event had a PIN, so nobody had seen it. One global CSS rule and a regression test later, it was gone.
 
 The real event and its QR code were created that same morning. Month-to-date AWS spend at that point: **$0.002**. Afterwards, `npm run download` pulled every file and checked each one's MD5 against S3. The upload window closed itself 30 days later.
 
